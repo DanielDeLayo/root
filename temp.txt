@@ -1,7 +1,0 @@
-TFile *f2 = new TFile("combined_local2_10M_plots.root")
-TH1F* h1 = (TH1F*)f.Get("Histo_shld_hit_1_1_1");
-TH1F* h2 = (TH1F*)f2.Get("Histo_shld_hit_1_1_1");
-histanalyze(h1, h2)
-.L macros/histanalyze.C
-histanalyze(h1, h2)
-
