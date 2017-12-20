@@ -59,38 +59,82 @@ TH1* getScaled(TH1* orig, TH1* other)
 	return energyScale;
 }
 
-TCanvas* histanalyze(TH1* orig, TH1* other)
+TH1* multAnalyze(TH1* orig, TH1* other)
 {	
-	cout << orig << endl;
-	cout << other << endl;
-	
-	
-	
-	cout << "called" << endl;	
-	//TCanvas* c1 = new TCanvas();
-	//orig->Draw();
-	//TCanvas* c2 = new TCanvas();
-	//other->Draw();
-		
-	TCanvas* c3 = new TCanvas();
-	c3->Divide(1, 2);
-	TH1* change = getAdd(orig, other);
-	c3->cd(1);
-	for (int i = 0; i < qDiff; i++)
-	{
-		if (change->InheritsFrom("TH2")) {((TH2*)change)->Rebin2D(2,2);} else {change->Rebin(2);}
-		change->SetMaximum(diffMax*4*(i+1));
-		change->SetMinimum(-diffMax*4*(i+1));
-	}
-	change->DrawCopy("colz");
 	TH1* scaled = getScaled(orig, other);
-	c3->cd(2);
 	for (int i = 0; i < qScaled; i++)
 	{	
 		if (scaled->InheritsFrom("TH2")) {((TH2*)scaled)->Rebin2D(2,2);} else {scaled->Rebin(2);}
 		
 		Scale2(scaled, .25);	
 	}	
-	scaled->DrawCopy("colz");	
-	return c3;
+	return scaled;
 }
+TH1* diffAnalyze(TH1* orig, TH1* other)
+{	
+	for (int i = 0; i < qDiff; i++)
+	{
+		if (change->InheritsFrom("TH2")) {((TH2*)change)->Rebin2D(2,2);} else {change->Rebin(2);}
+		change->SetMaximum(diffMax*4*(i+1));
+		change->SetMinimum(-diffMax*4*(i+1));
+	}	
+	return change;
+}
+
+void histanalyze(){
+	TBrowser *b = new TBrowser();
+	TFile *f1 = new TFile("combined_local_10M_plots.root");
+	TFile *f2 = new TFile("combined_local2_10M_plots.root");
+	TFile *fw = new TFile("compared_file");
+	
+	
+	List *branchList = f1->GetListOfKeys();
+	TIter iter(branchList);
+	TKey *key;
+	while ((key = (TKey*)(iter.Next())) != 0)
+	{
+		//string keyStr(key->GetTitle());	
+		TClass *cl = gROOT->GetClass(key->GetClassName());
+		if (!cl->InheritsFrom("TCanvas")) continue;
+	
+		//cout <<"keys:" << endl;	
+		//cout << key << endl;	
+		//cout << key->ReadObj() << endl;	
+		TCanvas *tc = (TCanvas*)key->ReadObj();		
+		TCanvas *tc2 = (TCanvas*)f2->Get(key->GetTitle());	
+		TCanvas *tcw = new TCanvas();
+		
+		tcw->Divide(6, 3, 0, 0);
+		int counter = 0;
+		
+		TList *primList = tc->GetListOfPrimitives();	
+		TIter piter(primList);
+		TObject *prim;
+		while ((prim = piter.Next()) != 0)
+		{
+			cout << prim->ClassName() << endl;
+			if (!prim->InheritsFrom("TPad")) continue;
+			
+			TPad *primC = (TPad*) prim;
+			TObject *prim2;
+			TIter piter2(primC->GetListOfPrimitives());
+			
+			while ((prim2 = piter2.Next()) != 0)
+			{
+				cout << prim2->ClassName() << endl;
+				if (!prim2->InheritsFrom("TH1")) continue;
+				
+				cout << "CALLING" << endl;
+				tcw->cd(counter++);
+				diffAnalyze((TH1*)prim2, (TH1*)(tc2->FindObject(primC->GetTitle()))->FindObject(prim2->GetTitle()))->Draw();	
+				tcw->cd(counter++);
+				multAnalyze((TH1*)prim2, (TH1*)(tc2->FindObject(primC->GetTitle()))->FindObject(prim2->GetTitle()))->Draw();	
+				cout <<"end" << endl;
+			}	
+		}	
+	
+	}		
+
+}
+
+ 
