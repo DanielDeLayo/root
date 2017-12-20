@@ -78,10 +78,7 @@ TCanvas* histanalyze(TH1* orig, TH1* other)
 	c3->cd(1);
 	for (int i = 0; i < qDiff; i++)
 	{
-		string checkName(change->ClassName());
-		cout << checkName << endl;
-
-		if (checkName.find("TH2")==0) {((TH2*)change)->Rebin2D(2,2);} else {change->Rebin(2);}
+		if (change->InheritsFrom("TH2")) {((TH2*)change)->Rebin2D(2,2);} else {change->Rebin(2);}
 		change->SetMaximum(diffMax*4*(i+1));
 		change->SetMinimum(-diffMax*4*(i+1));
 	}
@@ -90,11 +87,9 @@ TCanvas* histanalyze(TH1* orig, TH1* other)
 	c3->cd(2);
 	for (int i = 0; i < qScaled; i++)
 	{	
-		string checkName(scaled->ClassName());
-		cout << checkName << endl;
-		if (checkName.find("TH2")==0) {((TH2*)scaled)->Rebin2D(2,2);} else {scaled->Rebin(2);}
+		if (scaled->InheritsFrom("TH2")) {((TH2*)scaled)->Rebin2D(2,2);} else {scaled->Rebin(2);}
 		
-		Scale2(scaled, .25.);	
+		Scale2(scaled, .25);	
 	}	
 	scaled->DrawCopy("colz");	
 	return c3;
