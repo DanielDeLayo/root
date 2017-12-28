@@ -27,6 +27,18 @@ void updateProgress()
 	cout << "\r" << currCanvas << "/" << canvasCount << std::flush;
 }
 
+void enableShowCanvas()
+{
+	if (silent)
+		gROOT->SetBatch(kFALSE);
+}
+
+void disableShowCanvas()
+{
+	if (silent)
+		gROOT->SetBatch(kTRUE);
+}
+
 void Scale2(TH1* toScale, double fac)
 {
 	//int bins = toScale->GetSize();
@@ -83,10 +95,8 @@ TH1* diffAnalyze(TH1* orig, TH1* other)
 	return change;
 }
 
-void histanalyze(){
-	if (silent)
-		gROOT->SetBatch(kTRUE); 
-	TBrowser *b = new TBrowser();
+void histanalyze(){ 
+	disableShowCanvas();
 	TFile *f1 = new TFile("combined_local_10M_plots.root");
 	TFile *f2 = new TFile("combined_local2_10M_plots.root");
 	TFile *fw = new TFile("compared_file.root", "RECREATE");
@@ -103,11 +113,11 @@ void histanalyze(){
 	iter.Reset();
 	while ((key = (TKey*)(iter.Next())) != 0)
 	{
-		updateProgress();
 		//string keyStr(key->GetTitle());	
 		TClass *cl = gROOT->GetClass(key->GetClassName());
 		if (!cl->InheritsFrom("TCanvas")) continue;
 		currCanvas++;
+		updateProgress();
 		TCanvas *tc = (TCanvas*)key->ReadObj();		
 		TCanvas *tc2 = (TCanvas*)f2->Get(key->GetTitle());	
 		
@@ -132,36 +142,22 @@ void histanalyze(){
 				if (!prim2->InheritsFrom("TH1")) {continue;}
 				TObject *primMatch = (tc2->FindObject(prim2->GetName()));
 				if (!primMatch->InheritsFrom("TH1")) {continue;}
+				std::string searchMe((TH1*)prim->GetTitle());
+				if (searchMe.find("All Area")) enableShowCanvas();
 				tcw->cd(counter++);
 				diffAnalyze((TH1*)prim2, (TH1*)(primMatch))->Draw("COLZ1");
 				tcw->cd(counter++);
 				multAnalyze((TH1*)prim2, (TH1*)(primMatch))->Draw("COLZ1");	
+				
 				//cout << counter << ": " <<prim2->GetName() << endl;
 				//cout << primMatch->GetName() << endl;
 			}	
 		}
+		disableShowCanvas();
 		fw->WriteTObject(tcw, tc->GetName());
 		fw->Flush();
 		delete tcw;	
 	}		
-	if (silent) gROOT->SetBatch(kFALSE);
+	enableShowCanvas();
 	delete fw; delete f1; delete f2; 
 }
-
-void summarize()
-{
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
