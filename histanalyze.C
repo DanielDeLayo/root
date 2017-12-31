@@ -1,9 +1,15 @@
 // Daniel DeLayo's Graph Comparing Tool
-#include <cassert>
-#include <cmath>
-
+#include <iostream>
 #include "TH1.h"
+#include "TH2.h"
+#include "TFile.h"
+#include "TPad.h"
+#include "TKey.h"
+#include "TClass.h"
 #include "TCanvas.h"
+#include "TApplication.h"
+#include "TROOT.h"
+
 
 int diffMax = 500;
 int scaleMax = 2;
@@ -24,7 +30,7 @@ int currCanvas = 0;
 
 void updateProgress()
 {
-	cout << "\r" << currCanvas << "/" << canvasCount << std::flush;
+	std::cout << "\r" << currCanvas << "/" << canvasCount << std::flush;
 }
 
 void enableShowCanvas()
@@ -38,7 +44,6 @@ void disableShowCanvas()
 	if (silent)
 		gROOT->SetBatch(kTRUE);
 }
-
 void Scale2(TH1* toScale, double fac)
 {
 	//int bins = toScale->GetSize();
@@ -52,20 +57,15 @@ void Scale2(TH1* toScale, double fac)
 
 TH1* getAdd(TH1* orig, TH1* other)
 {
-	string delme;
 	TH1* negChange = (TH1*)other->Clone();
 	//TCanvas *c = new TCanvas();	
 	//negChange->Draw();
 	//TCanvas *cc = new TCanvas();
 	//orig->Draw();
 	
-	//cin >> delme;	
 	negChange->Add(orig, -1); 
-	//cin >> delme;
 	negChange->SetMaximum(diffMax);
-	//cin >> delme;
-	negChange->SetMinimum(-diffMax);	
-	//cin >> delme;
+	negChange->SetMinimum(-diffMax);
 	return negChange;
 	//return other->Clone()->Add(orig, -1)->SetMaximum(diffMax)->SetMinimum(-diffMax);	
 }
@@ -95,13 +95,17 @@ TH1* diffAnalyze(TH1* orig, TH1* other)
 	return change;
 }
 
-void histanalyze(){ 
+void histanalyze(/*string fString1, string fString2*/){ 
 	disableShowCanvas();
+	//TFile *f1 = new TFile(fString1);
+	//TFile *f2 = new TFile(fString2);
 	TFile *f1 = new TFile("combined_local_10M_plots.root");
 	TFile *f2 = new TFile("combined_local2_10M_plots.root");
 	TFile *fw = new TFile("compared_file.root", "RECREATE");
-	
+	TFile *fws = new TFile("compared_file_summary.root", "RECREATE");
+			
 	TList *branchList = f1->GetListOfKeys();
+	for (int i = 0; i < 5; i++) {branchList->Remove(branchList->At(32));} //ahhh
 	TIter iter(branchList);
 	TKey *key;
 	
@@ -118,9 +122,10 @@ void histanalyze(){
 		if (!cl->InheritsFrom("TCanvas")) continue;
 		currCanvas++;
 		updateProgress();
-		TCanvas *tc = (TCanvas*)key->ReadObj();		
+		TCanvas *tc = (TCanvas*)f1->Get(key->GetTitle());		
 		TCanvas *tc2 = (TCanvas*)f2->Get(key->GetTitle());	
-		
+		bool toDraw = false;
+			
 		TCanvas *tcw = new TCanvas();
 		tcw->SetCanvasSize(canvasX, canvasY);
 		tcw->SetWindowSize(screenX, screenY);
@@ -142,22 +147,35 @@ void histanalyze(){
 				if (!prim2->InheritsFrom("TH1")) {continue;}
 				TObject *primMatch = (tc2->FindObject(prim2->GetName()));
 				if (!primMatch->InheritsFrom("TH1")) {continue;}
-				std::string searchMe((TH1*)prim->GetTitle());
-				if (searchMe.find("All Area")) enableShowCanvas();
+				std::string searchMe(((TH1*)prim2)->GetTitle());
+				if (searchMe.find("All Area") != std::string::npos) toDraw = true;
 				tcw->cd(counter++);
 				diffAnalyze((TH1*)prim2, (TH1*)(primMatch))->Draw("COLZ1");
 				tcw->cd(counter++);
 				multAnalyze((TH1*)prim2, (TH1*)(primMatch))->Draw("COLZ1");	
-				
 				//cout << counter << ": " <<prim2->GetName() << endl;
 				//cout << primMatch->GetName() << endl;
+				//cout << (TH1*) prim2 << endl;
+				//cout << (TH1*) primMatch << endl;	
 			}	
 		}
-		disableShowCanvas();
+		if (toDraw) {enableShowCanvas(); tcw->SetBatch(kFALSE); tcw->DrawClone(); disableShowCanvas();
+				fws->WriteTObject(tcw, tc->GetName()); fws->Flush();							}
 		fw->WriteTObject(tcw, tc->GetName());
 		fw->Flush();
-		delete tcw;	
+		if(!toDraw) {delete tcw;}
 	}		
 	enableShowCanvas();
 	delete fw; delete f1; delete f2; 
 }
+
+int main(int argc, char** argv)
+{
+	TApplication app("ROOT Application", &argc, argv);
+	histanalyze(/*app.Argc(), app.Argv()*/);
+	app.Run();
+	return 0;
+}
+
+
+
