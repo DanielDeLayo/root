@@ -140,18 +140,21 @@ void histanalyze(std::string fString1, std::string fString2){
 		TCanvas *tc = (TCanvas*)f1->Get(key->GetTitle());		
 		TCanvas *tc2 = (TCanvas*)f2->Get(key->GetTitle());	
 		bool toDraw = false;
-	
+		std::string title = tc->GetTitle();
+		title.append("_compared");	
 		TCanvas *tcw = new TCanvas();
+		tcw->SetTitle(title.c_str());
 		//tcw->SetCanvasSize(canvasX, canvasY);
-		//tcw->SetWindowSize(screenX, screenY);
-		
+		//tcw->SetWindowSize(screenX, screenY);		
+
 		tcw->Divide(sourceX*2, sourceY, 0.001, 0.01);
 		int counter = 1;
 		
 		TList *primList = tc->GetListOfPrimitives();	
 		TIter piter(primList);
 		TObject *prim;
-		TH1* histos[sourceX * sourceY * 2] = {};
+		TH1** histos = new TH1*[sourceX * sourceY * 2];
+		for (int i = 0; i < (sourceX * sourceY * 2); i++) {histos[i]=NULL;}
 		while ((prim = piter.Next()) != 0)
 		{
 			if (!prim->InheritsFrom("TPad")) continue;	
@@ -172,7 +175,7 @@ void histanalyze(std::string fString1, std::string fString2){
 				tcw->cd(counter++);
 				histos[counter-2] = multAnalyze((TH1*)prim2, (TH1*)(primMatch));
 				histos[counter-2]->Draw("COLZ1");
-			}		
+			}	
 		}
 		if (toDraw) {
 			if (!silent) {enableShowCanvas(); tcw->SetBatch(kFALSE); tcw->DrawClone(); disableShowCanvas();}
@@ -181,6 +184,7 @@ void histanalyze(std::string fString1, std::string fString2){
 		fw->WriteTObject(tcw, tc->GetName());
 		fw->Flush();
 		for (int i = 0; i < (sourceX * sourceY * 2); i++) { if (histos[i] != NULL) delete histos[i];}
+		delete[] histos;
 		delete tcw; delete tc; delete tc2;
 	}		
 	enableShowCanvas();
