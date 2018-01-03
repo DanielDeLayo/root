@@ -7,7 +7,7 @@
 #include "TKey.h"
 #include "TClass.h"
 #include "TCanvas.h"
-#include "TApplication.h"
+#include "TRint.h"
 #include "TROOT.h"
 
 
@@ -178,7 +178,7 @@ void histanalyze(std::string fString1, std::string fString2){
 			}	
 		}
 		if (toDraw) {
-			if (!silent) {enableShowCanvas(); tcw->SetBatch(kFALSE); tcw->DrawClone(); disableShowCanvas();}
+			if (!silent) {enableShowCanvas(); tcw->DrawClone(); disableShowCanvas();}
 			fws->WriteTObject(tcw, tc->GetName()); fws->Flush();
 		}
 		fw->WriteTObject(tcw, tc->GetName());
@@ -233,8 +233,8 @@ int main(int argc, char** argv)
 		}		
 		pArgv[pArgc++] = argv[i];
 	}
-	TApplication app("ROOT Application", &pArgc, pArgv);
+	TRint app("ROOT Application", &pArgc, pArgv);
 	runner(app.Argc(), app.Argv());	
-	if (!silent) app.Run();
+	app.Run();
 	return 0;
 }
