@@ -19,10 +19,10 @@ int qDiff = 1; //number of bin 1/4s (neg quality) for subtracted
 int sourceX = 3; //source pads in X direction (used for output)
 int sourceY = 3; //source pads in Y direction  (used for output)
 
-int canvasX = 3000;
-int canvasY = 1000;
-int screenX = 1800;
-int screenY = 900;
+//int canvasX = 3000;
+//int canvasY = 1000;
+//int screenX = 1800;
+//int screenY = 900;
 bool silent = true;
 
 int canvasCount = 0;
@@ -35,15 +35,14 @@ void updateProgress()
 
 void enableShowCanvas()
 {
-	if (silent)
-		gROOT->SetBatch(kFALSE);
+	gROOT->SetBatch(kFALSE);
 }
 
 void disableShowCanvas()
 {
-	if (silent)
-		gROOT->SetBatch(kTRUE);
+	gROOT->SetBatch(kTRUE);
 }
+
 void Scale2(TH1* toScale, double fac)
 {
 	//int bins = toScale->GetSize();
@@ -95,40 +94,56 @@ TH1* diffAnalyze(TH1* orig, TH1* other)
 	return change;
 }
 
-void histanalyze(/*string fString1, string fString2*/){ 
-	disableShowCanvas();
-	//TFile *f1 = new TFile(fString1);
-	//TFile *f2 = new TFile(fString2);
-	TFile *f1 = new TFile("combined_local_10M_plots.root");
-	TFile *f2 = new TFile("combined_local2_10M_plots.root");
-	TFile *fw = new TFile("compared_file.root", "RECREATE");
-	TFile *fws = new TFile("compared_file_summary.root", "RECREATE");
-			
+void countCanvas(std::string fName)
+{
+	TFile *f1 = new TFile(fName.c_str());
 	TList *branchList = f1->GetListOfKeys();
-	for (int i = 0; i < 5; i++) {branchList->Remove(branchList->At(32));} //ahhh
-	TIter iter(branchList);
-	TKey *key;
 	
+	for (int i = 0; i < 5; i++) {branchList->Remove(branchList->At(32));} //ahhh
+	
+	TIter iter(branchList);
+	TKey* key;
 	while ((key = (TKey*)(iter.Next())) != 0) {
 		TClass *cl = gROOT->GetClass(key->GetClassName());
 		if (!cl->InheritsFrom("TCanvas")) continue;
 		canvasCount++;
 	}
-	iter.Reset();
+	delete f1;
+}
+
+void histanalyze(std::string fString1, std::string fString2){ 
+	disableShowCanvas();
+	TFile *f1 = new TFile(fString1.c_str());
+	TFile *f2 = new TFile(fString2.c_str());
+	
+	fString1.erase(fString1.size()-5);
+	fString2.erase(fString2.size()-5);
+	std::string toWrite = fString1 + "_vs_" + fString2;
+
+	TFile *fw = new TFile((toWrite + ".root").c_str(), "RECREATE");
+	TFile *fws = new TFile((toWrite + "_summary.root").c_str(), "RECREATE");
+			
+	TList *branchList = f1->GetListOfKeys();
+	for (int i = 0; i < 5; i++) {branchList->Remove(branchList->At(32));} //ahhh
+	TIter iter(branchList);
+	TKey *key;
 	while ((key = (TKey*)(iter.Next())) != 0)
 	{
+		
+		
 		//string keyStr(key->GetTitle());	
 		TClass *cl = gROOT->GetClass(key->GetClassName());
 		if (!cl->InheritsFrom("TCanvas")) continue;
 		currCanvas++;
 		updateProgress();
+		
 		TCanvas *tc = (TCanvas*)f1->Get(key->GetTitle());		
 		TCanvas *tc2 = (TCanvas*)f2->Get(key->GetTitle());	
 		bool toDraw = false;
-			
+	
 		TCanvas *tcw = new TCanvas();
-		tcw->SetCanvasSize(canvasX, canvasY);
-		tcw->SetWindowSize(screenX, screenY);
+		//tcw->SetCanvasSize(canvasX, canvasY);
+		//tcw->SetWindowSize(screenX, screenY);
 		
 		tcw->Divide(sourceX*2, sourceY, 0.001, 0.01);
 		int counter = 1;
@@ -136,6 +151,7 @@ void histanalyze(/*string fString1, string fString2*/){
 		TList *primList = tc->GetListOfPrimitives();	
 		TIter piter(primList);
 		TObject *prim;
+		TH1* histos[sourceX * sourceY * 2] = {};
 		while ((prim = piter.Next()) != 0)
 		{
 			if (!prim->InheritsFrom("TPad")) continue;	
@@ -148,34 +164,73 @@ void histanalyze(/*string fString1, string fString2*/){
 				TObject *primMatch = (tc2->FindObject(prim2->GetName()));
 				if (!primMatch->InheritsFrom("TH1")) {continue;}
 				std::string searchMe(((TH1*)prim2)->GetTitle());
+				
 				if (searchMe.find("All Area") != std::string::npos) toDraw = true;
 				tcw->cd(counter++);
-				diffAnalyze((TH1*)prim2, (TH1*)(primMatch))->Draw("COLZ1");
+				histos[counter-2] = diffAnalyze((TH1*)prim2, (TH1*)(primMatch));
+				histos[counter-2]->Draw("COLZ1");
 				tcw->cd(counter++);
-				multAnalyze((TH1*)prim2, (TH1*)(primMatch))->Draw("COLZ1");	
-				//cout << counter << ": " <<prim2->GetName() << endl;
-				//cout << primMatch->GetName() << endl;
-				//cout << (TH1*) prim2 << endl;
-				//cout << (TH1*) primMatch << endl;	
-			}	
+				histos[counter-2] = multAnalyze((TH1*)prim2, (TH1*)(primMatch));
+				histos[counter-2]->Draw("COLZ1");
+			}		
 		}
-		if (toDraw) {enableShowCanvas(); tcw->SetBatch(kFALSE); tcw->DrawClone(); disableShowCanvas();
-				fws->WriteTObject(tcw, tc->GetName()); fws->Flush();							}
+		if (toDraw) {
+			if (!silent) {enableShowCanvas(); tcw->SetBatch(kFALSE); tcw->DrawClone(); disableShowCanvas();}
+			fws->WriteTObject(tcw, tc->GetName()); fws->Flush();
+		}
 		fw->WriteTObject(tcw, tc->GetName());
 		fw->Flush();
-		if(!toDraw) {delete tcw;}
+		for (int i = 0; i < (sourceX * sourceY * 2); i++) { if (histos[i] != NULL) delete histos[i];}
+		delete tcw; delete tc; delete tc2;
 	}		
 	enableShowCanvas();
-	delete fw; delete f1; delete f2; 
+	delete fw; delete f1; delete f2; delete fws; 
+}
+
+void runner (int argc, char** argv)
+{
+	std::cout << "args: " << argc << std::endl;
+	std::string f1(argv[1]);
+	for (int i = 0; i < argc; i++)
+	{
+		std::cout << i << ":" << argv[i] << std::endl;
+	}
+	for (int i = 2; i < argc; i++)
+	{
+		std::string fi(argv[i]);
+		countCanvas(f1);
+		if (i != argc-1) countCanvas(fi);
+	}
+
+	for (int i = 2; i < argc; i++)
+	{
+		std::string fi(argv[i]);
+		std::cout << "ahh" << std::endl;
+		histanalyze(f1, fi);
+	}
+	for (int i = 2; i < argc-1; i++)
+	{
+		std::string fi(argv[i]);
+		std::string fnext(argv[i+1]);
+		histanalyze(fi, fnext);
+	}
 }
 
 int main(int argc, char** argv)
 {
-	TApplication app("ROOT Application", &argc, argv);
-	histanalyze(/*app.Argc(), app.Argv()*/);
-	app.Run();
+	int pArgc = 0;
+	char* pArgv[argc];
+	for (int i = 0; i < argc; i++)
+	{	
+		if (argv[i][0] == '-') 
+		{
+			if (argv[i][1] == 'l') {silent = false;}
+			continue;	
+		}		
+		pArgv[pArgc++] = argv[i];
+	}
+	TApplication app("ROOT Application", &pArgc, pArgv);
+	runner(app.Argc(), app.Argv());	
+	if (!silent) app.Run();
 	return 0;
 }
-
-
-
