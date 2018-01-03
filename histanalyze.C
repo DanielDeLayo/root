@@ -193,8 +193,8 @@ void histanalyze(std::string fString1, std::string fString2){
 
 void runner (int argc, char** argv)
 {
-	/*std::cout << "args: " << argc << std::endl;
 	std::string f1(argv[1]);
+	/*std::cout << "args: " << argc << std::endl;
 	for (int i = 0; i < argc; i++)
 	{
 		std::cout << i << ":" << argv[i] << std::endl;
