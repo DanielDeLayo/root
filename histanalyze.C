@@ -99,7 +99,7 @@ void countCanvas(std::string fName)
 	TFile *f1 = new TFile(fName.c_str());
 	TList *branchList = f1->GetListOfKeys();
 	
-	for (int i = 0; i < 5; i++) {branchList->Remove(branchList->At(32));} //ahhh
+	//for (int i = 0; i < 5; i++) {branchList->Remove(branchList->At(32));} //ahhh
 	
 	TIter iter(branchList);
 	TKey* key;
@@ -124,7 +124,7 @@ void histanalyze(std::string fString1, std::string fString2){
 	TFile *fws = new TFile((toWrite + "_summary.root").c_str(), "RECREATE");
 			
 	TList *branchList = f1->GetListOfKeys();
-	for (int i = 0; i < 5; i++) {branchList->Remove(branchList->At(32));} //ahhh
+	//for (int i = 0; i < 5; i++) {branchList->Remove(branchList->At(32));} //ahhh
 	TIter iter(branchList);
 	TKey *key;
 	while ((key = (TKey*)(iter.Next())) != 0)
@@ -193,12 +193,12 @@ void histanalyze(std::string fString1, std::string fString2){
 
 void runner (int argc, char** argv)
 {
-	std::cout << "args: " << argc << std::endl;
+	/*std::cout << "args: " << argc << std::endl;
 	std::string f1(argv[1]);
 	for (int i = 0; i < argc; i++)
 	{
 		std::cout << i << ":" << argv[i] << std::endl;
-	}
+	}*/
 	for (int i = 2; i < argc; i++)
 	{
 		std::string fi(argv[i]);
@@ -209,7 +209,6 @@ void runner (int argc, char** argv)
 	for (int i = 2; i < argc; i++)
 	{
 		std::string fi(argv[i]);
-		std::cout << "ahh" << std::endl;
 		histanalyze(f1, fi);
 	}
 	for (int i = 2; i < argc-1; i++)
